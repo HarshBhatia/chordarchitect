@@ -5,7 +5,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Pressable, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
 import { FUNCTION_COLORS } from '../engine/constants';
 import { suggestPassingChords } from '../engine/harmony';
@@ -51,7 +51,7 @@ export function ProgressionBuilder() {
                 style={[styles.playBtn, isPlaying && styles.playBtnActive]}
                 onPress={isPlaying ? stopAudio : playFullProgression}
               >
-                <Ionicons
+                <Icon
                   name={isPlaying ? 'stop' : 'play'}
                   size={12}
                   color={isPlaying ? '#F87171' : '#34D399'}
@@ -61,7 +61,7 @@ export function ProgressionBuilder() {
                 </Text>
               </Pressable>
               <Pressable style={styles.clearBtn} onPress={clearProgression}>
-                <Ionicons name="trash-outline" size={12} color="rgba(255,255,255,0.4)" />
+                <Icon name="trash-outline" size={12} color="rgba(255,255,255,0.4)" />
               </Pressable>
             </>
           )}
@@ -72,7 +72,7 @@ export function ProgressionBuilder() {
 
       {progression.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="musical-notes-outline" size={28} color="rgba(255,255,255,0.15)" />
+          <Icon name="musical-notes-outline" size={28} color="rgba(255,255,255,0.15)" />
           <Text style={styles.emptyText}>
             Tap + on chords above or select a template
           </Text>
@@ -94,7 +94,7 @@ export function ProgressionBuilder() {
                   <View style={styles.moveControls}>
                     {idx > 0 && (
                       <Pressable onPress={() => moveInProgression(idx, idx - 1)} style={styles.moveBtn}>
-                        <Ionicons name="chevron-back" size={10} color="rgba(255,255,255,0.3)" />
+                        <Icon name="chevron-back" size={10} color="rgba(255,255,255,0.3)" />
                       </Pressable>
                     )}
                   </View>
@@ -115,14 +115,14 @@ export function ProgressionBuilder() {
                       style={styles.removeBtn}
                       onPress={() => removeFromProgression(idx)}
                     >
-                      <Ionicons name="close" size={10} color="rgba(255,255,255,0.3)" />
+                      <Icon name="close" size={10} color="rgba(255,255,255,0.3)" />
                     </Pressable>
                   </Pressable>
 
                   <View style={styles.moveControls}>
                     {idx < progression.length - 1 && (
                       <Pressable onPress={() => moveInProgression(idx, idx + 1)} style={styles.moveBtn}>
-                        <Ionicons name="chevron-forward" size={10} color="rgba(255,255,255,0.3)" />
+                        <Icon name="chevron-forward" size={10} color="rgba(255,255,255,0.3)" />
                       </Pressable>
                     )}
                   </View>
@@ -161,7 +161,7 @@ export function ProgressionBuilder() {
                 {/* Simple arrow if no passing chords */}
                 {!isLast && (!passingChords[idx] || passingChords[idx]!.length === 0) && (
                   <View style={styles.arrow}>
-                    <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.12)" />
+                    <Icon name="arrow-forward" size={14} color="rgba(255,255,255,0.12)" />
                   </View>
                 )}
               </React.Fragment>

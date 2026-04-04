@@ -5,7 +5,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Pressable, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
 import { FUNCTION_COLORS, FUNCTION_GLOW_COLORS } from '../engine/constants';
 import { designTokens } from '../theme';
@@ -86,7 +86,7 @@ export function DiatonicPalette() {
                     addToProgression(chord);
                   }}
                 >
-                  <Ionicons name="add" size={14} color="rgba(255,255,255,0.5)" />
+                  <Icon name="add" size={14} color="rgba(255,255,255,0.5)" />
                 </Pressable>
               </Pressable>
 

@@ -9,7 +9,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import Svg, { Rect, Line, Circle, Text as SvgText, G } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
 import { getVoicingMarkers, getGuitarVoicings } from '../engine/voicings';
 import { FRET_COUNT, FRET_MARKERS, DOUBLE_FRET_MARKERS, INTERVAL_COLORS } from '../engine/constants';
@@ -72,7 +72,7 @@ export function Fretboard() {
           onPress={prevVoicing}
           disabled={currentVoicingIdx === 0}
         >
-          <Ionicons name="chevron-back" size={14} color={currentVoicingIdx === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)'} />
+          <Icon name="chevron-back" size={14} color={currentVoicingIdx === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)'} />
         </Pressable>
         <Text style={styles.voicingLabel}>
           {currentVoicing?.label || 'Shape'} ({currentVoicingIdx + 1}/{voicings.length})
@@ -82,7 +82,7 @@ export function Fretboard() {
           onPress={nextVoicing}
           disabled={currentVoicingIdx >= voicings.length - 1}
         >
-          <Ionicons name="chevron-forward" size={14} color={currentVoicingIdx >= voicings.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)'} />
+          <Icon name="chevron-forward" size={14} color={currentVoicingIdx >= voicings.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)'} />
         </Pressable>
         <Pressable
           style={styles.playBtn}
@@ -90,7 +90,7 @@ export function Fretboard() {
             if (selectedChord?.notes?.length) playChord(selectedChord.notes);
           }}
         >
-          <Ionicons name="volume-high" size={14} color="#34D399" />
+          <Icon name="volume-high" size={14} color="#34D399" />
         </Pressable>
       </View>
 

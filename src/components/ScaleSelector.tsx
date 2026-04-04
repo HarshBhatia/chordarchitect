@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Pressable, View, Modal, ScrollView } from 'react-native';
 import { Text } from 'react-native-paper';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
 import { AVAILABLE_SCALES } from '../engine/constants';
 import { designTokens } from '../theme';
@@ -25,7 +25,7 @@ export function ScaleSelector() {
         <Text variant="labelLarge" style={styles.buttonText}>
           {currentScale?.label || scaleType}
         </Text>
-        <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.5)" />
+        <Icon name="chevron-down" size={16} color="rgba(255,255,255,0.5)" />
       </Pressable>
 
       <Modal
@@ -70,7 +70,7 @@ export function ScaleSelector() {
                           {scale.label}
                         </Text>
                         {scale.type === scaleType && (
-                          <Ionicons name="checkmark" size={18} color="#6C8EFF" />
+                          <Icon name="checkmark" size={18} color="#6C8EFF" />
                         )}
                       </Pressable>
                     </React.Fragment>

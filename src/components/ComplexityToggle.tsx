@@ -5,7 +5,7 @@
 import React from 'react';
 import { StyleSheet, Pressable, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
 import { designTokens } from '../theme';
 import type { Complexity } from '../types';
@@ -32,8 +32,8 @@ export function ComplexityToggle() {
               style={[styles.segment, isActive && styles.segmentActive]}
               onPress={() => setComplexity(level.value)}
             >
-              <Ionicons
-                name={level.icon as any}
+              <Icon
+                name={level.icon}
                 size={14}
                 color={isActive ? '#6C8EFF' : 'rgba(255,255,255,0.35)'}
               />

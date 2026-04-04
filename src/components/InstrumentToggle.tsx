@@ -5,7 +5,7 @@
 import React from 'react';
 import { StyleSheet, Pressable, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
 import { designTokens } from '../theme';
 
@@ -47,7 +47,7 @@ export function InstrumentToggle() {
         style={[styles.intervalBtn, showIntervals && styles.intervalBtnActive]}
         onPress={toggleIntervals}
       >
-        <Ionicons
+        <Icon
           name="swap-horizontal"
           size={14}
           color={showIntervals ? '#34D399' : 'rgba(255,255,255,0.4)'}
