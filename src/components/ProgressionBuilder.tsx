@@ -24,6 +24,11 @@ export function ProgressionBuilder() {
   const stopAudio = useHarmonyStore(s => s.stopAudio);
   const isPlaying = useHarmonyStore(s => s.isPlaying);
   const playingChordIndex = useHarmonyStore(s => s.playingChordIndex);
+  const insertInProgression = useHarmonyStore(s => s.insertInProgression);
+  const bpm = useHarmonyStore(s => s.bpm);
+  const setBpm = useHarmonyStore(s => s.setBpm);
+  const looping = useHarmonyStore(s => s.looping);
+  const toggleLooping = useHarmonyStore(s => s.toggleLooping);
 
   // Compute passing chord suggestions between each pair
   const passingChords = useMemo(() => {
@@ -47,6 +52,21 @@ export function ProgressionBuilder() {
         <View style={styles.headerActions}>
           {progression.length > 0 && (
             <>
+              <View style={styles.tempoControls}>
+                <Pressable style={styles.bpmBtn} onPress={() => setBpm(Math.max(40, bpm - 10))}>
+                  <Text style={styles.bpmBtnText}>-</Text>
+                </Pressable>
+                <Text style={styles.bpmText}>{bpm} BPM</Text>
+                <Pressable style={styles.bpmBtn} onPress={() => setBpm(Math.min(200, bpm + 10))}>
+                  <Text style={styles.bpmBtnText}>+</Text>
+                </Pressable>
+              </View>
+              <Pressable
+                style={[styles.loopBtn, looping && styles.loopBtnActive]}
+                onPress={toggleLooping}
+              >
+                <Icon name="swap-horizontal" size={12} color={looping ? '#6C8EFF' : 'rgba(255,255,255,0.4)'} />
+              </Pressable>
               <Pressable
                 style={[styles.playBtn, isPlaying && styles.playBtnActive]}
                 onPress={isPlaying ? stopAudio : playFullProgression}
@@ -139,11 +159,7 @@ export function ProgressionBuilder() {
                           style={styles.passingChip}
                           onPress={() => {
                             // Insert passing chord between idx and idx+1
-                            const newProg = [...progression];
-                            newProg.splice(idx + 1, 0, pc);
-                            // We need to use the store directly
-                            addToProgression(pc);
-                            // Actually let's just add after current position
+                            insertInProgression(pc, idx);
                           }}
                         >
                           <Text style={styles.passingSymbol}>{pc.symbol}</Text>
@@ -227,6 +243,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(248, 113, 113, 0.08)',
+  },
+  tempoControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 12,
+    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  bpmBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  bpmBtnText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  bpmText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 10,
+    fontWeight: '600',
+    minWidth: 46,
+    textAlign: 'center',
+  },
+  loopBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  loopBtnActive: {
+    backgroundColor: 'rgba(108, 142, 255, 0.15)',
+    borderColor: 'rgba(108, 142, 255, 0.3)',
+    borderWidth: 1,
   },
   emptyState: {
     alignItems: 'center',

@@ -2,10 +2,24 @@
  * Harmony engine — functional harmony, roman numerals, progression resolution
  */
 
-import { Note } from 'tonal';
+import { Note, Chord } from 'tonal';
 import type { ChordInfo, Complexity, ScaleType } from '../types';
-import { PROGRESSION_TEMPLATES } from './constants';
+import { PROGRESSION_TEMPLATES, INTERVAL_DISPLAY } from './constants';
 import { getDiatonicChords, getSecondaryDominant } from './chords';
+
+/**
+ * Helper: get notes and intervals for a chord symbol using tonal
+ */
+function resolveChordNotes(symbol: string): { notes: string[]; intervals: string[]; displayIntervals: string[] } {
+  const info = Chord.get(symbol);
+  if (!info || !info.notes || info.notes.length === 0) {
+    // Fallback: try common patterns
+    return { notes: [], intervals: [], displayIntervals: [] };
+  }
+  const intervals = info.intervals || [];
+  const displayIntervals = intervals.map(iv => INTERVAL_DISPLAY[iv] || iv);
+  return { notes: info.notes, intervals, displayIntervals };
+}
 
 /**
  * Resolve a progression template into concrete chords
@@ -61,6 +75,7 @@ export function getSecondaryDominants(
 
   return diatonic.map((chord, idx) => {
     const secDomSymbol = getSecondaryDominant(chord.root);
+    const { notes, intervals, displayIntervals } = resolveChordNotes(secDomSymbol);
 
     return {
       symbol: secDomSymbol,
@@ -69,9 +84,9 @@ export function getSecondaryDominants(
       romanNumeral: `V7/${chord.romanNumeral}`,
       degree: idx + 1,
       function: 'dominant' as const,
-      notes: [],
-      intervals: [],
-      displayIntervals: [],
+      notes,
+      intervals,
+      displayIntervals,
       isSecondaryDominant: true,
       secondaryDominantTarget: chord.romanNumeral,
     };
@@ -79,7 +94,7 @@ export function getSecondaryDominants(
 }
 
 /**
- * Suggest passing chords between two chords
+ * Suggest passing chords between two chords (with actual notes populated)
  */
 export function suggestPassingChords(
   fromChord: ChordInfo,
@@ -87,24 +102,24 @@ export function suggestPassingChords(
 ): ChordInfo[] {
   const suggestions: ChordInfo[] = [];
 
-  // 1. Diminished approach: half-step below the target root
-  const fromRoot = fromChord.root;
   const toRoot = toChord.root;
 
-  // Chromatic approach from below
+  // 1. Diminished approach: half-step below the target root
   const dimRoot = Note.transpose(toRoot, '-2m');
   if (dimRoot) {
     const dimRootName = dimRoot.replace(/\d+$/, '');
+    const dimSymbol = `${dimRootName}dim7`;
+    const { notes, intervals, displayIntervals } = resolveChordNotes(dimSymbol);
     suggestions.push({
-      symbol: `${dimRootName}dim7`,
+      symbol: dimSymbol,
       root: dimRootName,
       name: `${dimRootName} diminished 7th (approach)`,
       romanNumeral: `#${romanDegreeLabel(fromChord.degree)}°7`,
       degree: 0,
       function: 'dominant',
-      notes: [],
-      intervals: [],
-      displayIntervals: [],
+      notes,
+      intervals,
+      displayIntervals,
     });
   }
 
@@ -112,16 +127,18 @@ export function suggestPassingChords(
   const tritoneRoot = Note.transpose(toRoot, '5d');
   if (tritoneRoot) {
     const tritoneRootName = tritoneRoot.replace(/\d+$/, '');
+    const triSymbol = `${tritoneRootName}7`;
+    const { notes, intervals, displayIntervals } = resolveChordNotes(triSymbol);
     suggestions.push({
-      symbol: `${tritoneRootName}7`,
+      symbol: triSymbol,
       root: tritoneRootName,
       name: `${tritoneRootName}7 (tritone sub)`,
       romanNumeral: `bII7`,
       degree: 0,
       function: 'dominant',
-      notes: [],
-      intervals: [],
-      displayIntervals: [],
+      notes,
+      intervals,
+      displayIntervals,
     });
   }
 

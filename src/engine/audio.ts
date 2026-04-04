@@ -1,6 +1,6 @@
 /**
  * Web Audio engine for ChordArchitect
- * Simple sine/triangle wave synth for chord and progression playback
+ * Warm pad synth with looping progression playback and tempo control
  */
 
 import { Note } from 'tonal';
@@ -8,7 +8,7 @@ import { Note } from 'tonal';
 let audioCtx: AudioContext | null = null;
 
 function getAudioContext(): AudioContext {
-  if (!audioCtx) {
+  if (!audioCtx || audioCtx.state === 'closed') {
     audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
   if (audioCtx.state === 'suspended') {
@@ -65,11 +65,9 @@ function playNote(
  * Get a playable frequency for a note name (adds octave if missing)
  */
 function noteToFreq(noteName: string): number | null {
-  // If note already has an octave, use it
   if (/\d$/.test(noteName)) {
     return Note.freq(noteName);
   }
-  // Default to octave 4 for chord tones
   return Note.freq(`${noteName}4`);
 }
 
@@ -85,9 +83,7 @@ export function playChord(notes: string[], duration: number = 1.5): void {
     notes.forEach((note, i) => {
       const freq = noteToFreq(note);
       if (freq) {
-        // Slight stagger for a strummed feel
         playNote(ctx, freq, now + i * 0.03, duration, vol);
-        // Add lower octave for root (first note) for body
         if (i === 0) {
           playNote(ctx, freq / 2, now, duration, vol * 0.6);
         }
@@ -99,54 +95,103 @@ export function playChord(notes: string[], duration: number = 1.5): void {
 }
 
 /**
- * Play a progression — each chord in sequence
- * Returns a promise that resolves when done, and an abort function
+ * Schedule one pass of the progression into the audio context
+ * Returns the total duration of this pass
+ */
+function schedulePass(
+  ctx: AudioContext,
+  chordNotesList: string[][],
+  bpm: number,
+  startTime: number,
+): number {
+  const beatDuration = 60 / bpm;
+  const chordDuration = beatDuration * 4;
+
+  chordNotesList.forEach((notes, chordIdx) => {
+    const chordStart = startTime + chordIdx * chordDuration;
+    const vol = Math.min(0.13, 0.5 / Math.max(notes.length, 1));
+
+    notes.forEach((note, noteIdx) => {
+      const freq = noteToFreq(note);
+      if (freq) {
+        playNote(ctx, freq, chordStart + noteIdx * 0.025, chordDuration * 0.9, vol);
+        if (noteIdx === 0) {
+          playNote(ctx, freq / 2, chordStart, chordDuration * 0.9, vol * 0.5);
+        }
+      }
+    });
+  });
+
+  return chordNotesList.length * chordDuration;
+}
+
+/**
+ * Play a progression — supports looping and variable tempo
+ * Returns a stop function and callbacks for chord index changes
  */
 export function playProgression(
   chordNotesList: string[][],
   bpm: number = 80,
-): { promise: Promise<void>; stop: () => void } {
+  loop: boolean = false,
+  onChordChange?: (index: number) => void,
+  onLoopComplete?: () => void,
+): { stop: () => void } {
   let stopped = false;
-  const beatDuration = 60 / bpm;
-  const chordDuration = beatDuration * 4; // 4 beats per chord
+  let timeoutIds: ReturnType<typeof setTimeout>[] = [];
 
   const stop = () => {
     stopped = true;
+    timeoutIds.forEach(id => clearTimeout(id));
+    timeoutIds = [];
     if (audioCtx) {
       audioCtx.close().catch(() => {});
       audioCtx = null;
     }
   };
 
-  const promise = new Promise<void>((resolve) => {
+  const beatDuration = 60 / bpm;
+  const chordDuration = beatDuration * 4;
+  const passDuration = chordNotesList.length * chordDuration;
+
+  function playPass(passStartMs: number) {
+    if (stopped) return;
+
     try {
       const ctx = getAudioContext();
-      const startTime = ctx.currentTime + 0.1;
-
-      chordNotesList.forEach((notes, chordIdx) => {
-        if (stopped) return;
-        const chordStart = startTime + chordIdx * chordDuration;
-        const vol = Math.min(0.13, 0.5 / Math.max(notes.length, 1));
-
-        notes.forEach((note, noteIdx) => {
-          const freq = noteToFreq(note);
-          if (freq) {
-            playNote(ctx, freq, chordStart + noteIdx * 0.025, chordDuration * 0.9, vol);
-            if (noteIdx === 0) {
-              playNote(ctx, freq / 2, chordStart, chordDuration * 0.9, vol * 0.5);
-            }
-          }
-        });
-      });
-
-      // Resolve after all chords finish
-      const totalDuration = chordNotesList.length * chordDuration;
-      setTimeout(() => resolve(), totalDuration * 1000 + 200);
+      schedulePass(ctx, chordNotesList, bpm, ctx.currentTime + 0.05);
     } catch (e) {
       console.warn('Progression playback failed:', e);
-      resolve();
+      return;
     }
-  });
 
-  return { promise, stop };
+    // Schedule chord index callbacks
+    chordNotesList.forEach((_, idx) => {
+      const id = setTimeout(() => {
+        if (!stopped && onChordChange) onChordChange(idx);
+      }, passStartMs + idx * chordDuration * 1000);
+      timeoutIds.push(id);
+    });
+
+    // Schedule end-of-pass
+    const endId = setTimeout(() => {
+      if (stopped) return;
+      if (onLoopComplete) onLoopComplete();
+      if (loop && !stopped) {
+        // Re-create audio context for next loop pass (previous one may have ramp-downs)
+        if (audioCtx) {
+          audioCtx.close().catch(() => {});
+          audioCtx = null;
+        }
+        playPass(0);
+      } else {
+        stop();
+        if (onChordChange) onChordChange(-1);
+      }
+    }, passStartMs + passDuration * 1000 + 100);
+    timeoutIds.push(endId);
+  }
+
+  playPass(0);
+
+  return { stop };
 }

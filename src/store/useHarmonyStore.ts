@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import type { ChordInfo, Complexity, InstrumentType, ScaleType } from '../types';
 import { getDiatonicChords } from '../engine/chords';
 import { getScaleNotes } from '../engine/scales';
-import { resolveTemplate, getSecondaryDominants, suggestPassingChords } from '../engine/harmony';
+import { resolveTemplate, getSecondaryDominants } from '../engine/harmony';
 import { playChord, playProgression } from '../engine/audio';
 
 interface HarmonyState {
@@ -36,6 +36,8 @@ interface HarmonyState {
   isPlaying: boolean;
   playingChordIndex: number;
   stopPlayback: (() => void) | null;
+  bpm: number;
+  looping: boolean;
 
   // Actions
   setRootNote: (note: string) => void;
@@ -48,6 +50,7 @@ interface HarmonyState {
   nextVoicing: () => void;
   prevVoicing: () => void;
   addToProgression: (chord: ChordInfo) => void;
+  insertInProgression: (chord: ChordInfo, afterIndex: number) => void;
   removeFromProgression: (index: number) => void;
   moveInProgression: (from: number, to: number) => void;
   clearProgression: () => void;
@@ -55,6 +58,8 @@ interface HarmonyState {
   playSelectedChord: () => void;
   playFullProgression: () => void;
   stopAudio: () => void;
+  setBpm: (bpm: number) => void;
+  toggleLooping: () => void;
 }
 
 function computeDerived(rootNote: string, scaleType: ScaleType, complexity: Complexity) {
@@ -88,6 +93,8 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
   isPlaying: false,
   playingChordIndex: -1,
   stopPlayback: null,
+  bpm: 80,
+  looping: true,
 
   setRootNote: (note) => {
     const { scaleType, complexity } = get();
@@ -140,6 +147,12 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
     progression: [...s.progression, chord],
   })),
 
+  insertInProgression: (chord, afterIndex) => set(s => {
+    const newProg = [...s.progression];
+    newProg.splice(afterIndex + 1, 0, chord);
+    return { progression: newProg };
+  }),
+
   removeFromProgression: (index) => set(s => ({
     progression: s.progression.filter((_, i) => i !== index),
   })),
@@ -167,29 +180,32 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
   },
 
   playFullProgression: () => {
-    const { progression, stopPlayback: existingStop } = get();
+    const { progression, stopPlayback: existingStop, bpm, looping } = get();
     if (existingStop) existingStop();
     if (progression.length === 0) return;
 
-    const chordNotes = progression.map(c => c.notes.length > 0 ? c.notes : ['C', 'E', 'G']);
-    const { promise, stop } = playProgression(chordNotes, 80);
+    const chordNotes = progression.map(c =>
+      c.notes.length > 0 ? c.notes : ['C', 'E', 'G']
+    );
+
+    const { stop } = playProgression(
+      chordNotes,
+      bpm,
+      looping,
+      (index) => {
+        // Chord change callback
+        if (index >= 0) {
+          set({ playingChordIndex: index });
+        } else {
+          set({ isPlaying: false, playingChordIndex: -1, stopPlayback: null });
+        }
+      },
+      () => {
+        // Loop complete (only called if looping)
+      },
+    );
 
     set({ isPlaying: true, playingChordIndex: 0, stopPlayback: stop });
-
-    // Update playing chord index over time
-    const beatDuration = 60 / 80;
-    const chordDuration = beatDuration * 4;
-    progression.forEach((_, idx) => {
-      setTimeout(() => {
-        if (get().isPlaying) {
-          set({ playingChordIndex: idx });
-        }
-      }, idx * chordDuration * 1000);
-    });
-
-    promise.then(() => {
-      set({ isPlaying: false, playingChordIndex: -1, stopPlayback: null });
-    });
   },
 
   stopAudio: () => {
@@ -197,4 +213,8 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
     if (stopPlayback) stopPlayback();
     set({ isPlaying: false, playingChordIndex: -1, stopPlayback: null });
   },
+
+  setBpm: (bpm) => set({ bpm: Math.max(40, Math.min(200, bpm)) }),
+
+  toggleLooping: () => set(s => ({ looping: !s.looping })),
 }));
