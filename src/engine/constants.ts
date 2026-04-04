@@ -112,6 +112,31 @@ export const INTERVAL_DISPLAY: Record<string, string> = {
   '13M': '13',
 };
 
+/** Per-interval marker colors for chord visualization */
+export const INTERVAL_COLORS: Record<string, string> = {
+  'R':   '#F59E0B', // amber — root
+  'b2':  '#A78BFA', // violet
+  '2':   '#A78BFA', // violet
+  'b3':  '#60A5FA', // blue
+  '3':   '#60A5FA', // blue
+  '4':   '#34D399', // emerald
+  '#4':  '#34D399', // emerald
+  'b5':  '#F87171', // red
+  '5':   '#E879F9', // fuchsia
+  '#5':  '#E879F9', // fuchsia
+  'b6':  '#FB923C', // orange
+  '6':   '#FB923C', // orange
+  'b7':  '#38BDF8', // sky
+  '7':   '#38BDF8', // sky
+  'b9':  '#A78BFA',
+  '9':   '#A78BFA',
+  '#9':  '#A78BFA',
+  '11':  '#34D399',
+  '#11': '#34D399',
+  'b13': '#FB923C',
+  '13':  '#FB923C',
+};
+
 /** Fret marker positions (inlay dots) */
 export const FRET_MARKERS = [3, 5, 7, 9, 12, 15];
 export const DOUBLE_FRET_MARKERS = [12];

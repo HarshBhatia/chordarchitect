@@ -88,7 +88,6 @@ export function ScaleSelector() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginLeft: 12,
   },
   label: {
     color: 'rgba(255,255,255,0.4)',
@@ -118,7 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: 20,
   },
   modalContent: {
     width: '100%',

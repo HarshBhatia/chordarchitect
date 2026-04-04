@@ -53,7 +53,7 @@ export function ComplexityToggle() {
 
 const styles = StyleSheet.create({
   container: {
-    marginLeft: 12,
+    // no marginLeft — parent handles spacing
   },
   label: {
     color: 'rgba(255,255,255,0.4)',

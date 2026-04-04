@@ -1,10 +1,5 @@
 /**
- * ChordArchitect — Main Screen
- * 
- * Three-panel layout:
- * 1. Top: Key / Scale / Complexity selectors
- * 2. Center: Instrument visualizer (Fretboard or Piano)
- * 3. Bottom: Diatonic Palette + Progression Builder
+ * ChordArchitect — Main Screen (responsive)
  */
 
 import React from 'react';
@@ -29,6 +24,7 @@ export default function MainScreen() {
   const scaleType = useHarmonyStore(s => s.scaleType);
   const { width } = useWindowDimensions();
   const isWide = width > 768;
+  const isNarrow = width < 480;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -37,13 +33,16 @@ export default function MainScreen() {
         contentContainerStyle={[
           styles.content,
           isWide && styles.contentWide,
+          isNarrow && styles.contentNarrow,
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* ─── Header ─── */}
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, isNarrow && styles.headerRowNarrow]}>
           <View style={styles.titleBlock}>
-            <Text style={styles.appTitle}>ChordArchitect</Text>
+            <Text style={[styles.appTitle, isNarrow && styles.appTitleNarrow]}>
+              ChordArchitect
+            </Text>
             <Text style={styles.appSubtitle}>Harmonic Sandbox</Text>
           </View>
           <InstrumentToggle />
@@ -52,7 +51,7 @@ export default function MainScreen() {
         {/* ─── Selectors ─── */}
         <View style={styles.selectorsSection}>
           <KeySelector />
-          <View style={styles.scaleComplexityRow}>
+          <View style={[styles.scaleComplexityRow, isNarrow && styles.scaleComplexityRowNarrow]}>
             <ScaleSelector />
             <ComplexityToggle />
           </View>
@@ -93,7 +92,6 @@ export default function MainScreen() {
         {/* ─── Progression Builder ─── */}
         <ProgressionBuilder />
 
-        {/* Footer spacer */}
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
@@ -111,7 +109,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    gap: 14,
+    gap: 12,
   },
   contentWide: {
     maxWidth: 960,
@@ -119,11 +117,20 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 32,
   },
+  contentNarrow: {
+    paddingHorizontal: 10,
+    gap: 10,
+  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  headerRowNarrow: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 8,
   },
   titleBlock: {
     gap: 0,
@@ -134,19 +141,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: -0.5,
   },
+  appTitleNarrow: {
+    fontSize: 20,
+  },
   appSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     color: 'rgba(255,255,255,0.3)',
     letterSpacing: 2,
     textTransform: 'uppercase',
     fontWeight: '500',
   },
   selectorsSection: {
-    gap: 10,
+    gap: 8,
   },
   scaleComplexityRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+  },
+  scaleComplexityRowNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
   },
   keyDisplay: {
     flexDirection: 'row',
@@ -154,7 +169,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 4,
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   keyDisplayText: {
     color: 'rgba(255,255,255,0.5)',
@@ -164,24 +179,25 @@ const styles = StyleSheet.create({
   },
   legendRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   legendText: {
     color: 'rgba(255,255,255,0.3)',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '500',
   },
   visualizerSection: {
-    // Visualizer fills available width
+    // overflow scroll on narrow screens
+    overflow: 'hidden',
   },
 });
