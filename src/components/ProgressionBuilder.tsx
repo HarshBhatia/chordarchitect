@@ -2,18 +2,21 @@
  * Progression Builder — timeline with play, passing chord suggestions, and responsive layout
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Pressable, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Text, Tooltip } from 'react-native-paper';
 import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
 import { FUNCTION_COLORS } from '../engine/constants';
 import { suggestPassingChords } from '../engine/harmony';
+import { EditChordModal } from './EditChordModal';
 import { designTokens } from '../theme';
-import { ProgressionTemplates } from './ProgressionTemplates';
+import { downloadMidi } from '../engine/midi';
 import type { ChordInfo } from '../types';
 
 export function ProgressionBuilder() {
+  const [editingChordIndex, setEditingChordIndex] = useState<number | null>(null);
+  const [expandedPassingIdx, setExpandedPassingIdx] = useState<number | null>(null);
   const progression = useHarmonyStore(s => s.progression);
   const removeFromProgression = useHarmonyStore(s => s.removeFromProgression);
   const moveInProgression = useHarmonyStore(s => s.moveInProgression);
@@ -27,8 +30,6 @@ export function ProgressionBuilder() {
   const insertInProgression = useHarmonyStore(s => s.insertInProgression);
   const bpm = useHarmonyStore(s => s.bpm);
   const setBpm = useHarmonyStore(s => s.setBpm);
-  const looping = useHarmonyStore(s => s.looping);
-  const toggleLooping = useHarmonyStore(s => s.toggleLooping);
 
   // Compute passing chord suggestions between each pair
   const passingChords = useMemo(() => {
@@ -48,7 +49,10 @@ export function ProgressionBuilder() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text variant="labelSmall" style={styles.label}>PROGRESSION</Text>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+          <Text variant="labelSmall" style={styles.label}>PROGRESSION</Text>
+          <Text style={styles.lengthBadge}>{progression.length}/16</Text>
+        </View>
         <View style={styles.headerActions}>
           {progression.length > 0 && (
             <>
@@ -61,34 +65,38 @@ export function ProgressionBuilder() {
                   <Text style={styles.bpmBtnText}>+</Text>
                 </Pressable>
               </View>
+
               <Pressable
-                style={[styles.loopBtn, looping && styles.loopBtnActive]}
-                onPress={toggleLooping}
-              >
-                <Icon name="swap-horizontal" size={12} color={looping ? '#6C8EFF' : 'rgba(255,255,255,0.4)'} />
-              </Pressable>
-              <Pressable
-                style={[styles.playBtn, isPlaying && styles.playBtnActive]}
+                style={[styles.playBtn, isPlaying ? styles.playBtnStop : styles.playBtnStart]}
                 onPress={isPlaying ? stopAudio : playFullProgression}
               >
                 <Icon
                   name={isPlaying ? 'stop' : 'play'}
                   size={12}
-                  color={isPlaying ? '#F87171' : '#34D399'}
+                  color={isPlaying ? '#FFB4AB' : '#3C0091'}
                 />
-                <Text style={[styles.playText, isPlaying && styles.playTextStop]}>
+                <Text style={[styles.playText, isPlaying ? styles.playBtnTextStop : styles.playBtnTextPlay]}>
                   {isPlaying ? 'Stop' : 'Play'}
                 </Text>
               </Pressable>
-              <Pressable style={styles.clearBtn} onPress={clearProgression}>
-                <Icon name="trash-outline" size={12} color="rgba(255,255,255,0.4)" />
-              </Pressable>
+
+              <Tooltip title="Download MIDI">
+                <Pressable style={styles.clearBtn} onPress={() => {
+                  downloadMidi(progression, bpm);
+                }}>
+                  <Icon name="download-outline" size={12} color="rgba(255,255,255,0.4)" />
+                </Pressable>
+              </Tooltip>
+
+              <Tooltip title="Clear Progression">
+                <Pressable style={styles.clearBtn} onPress={clearProgression}>
+                  <Icon name="trash-outline" size={12} color="rgba(255,255,255,0.4)" />
+                </Pressable>
+              </Tooltip>
             </>
           )}
         </View>
       </View>
-
-      <ProgressionTemplates />
 
       {progression.length === 0 ? (
         <View style={styles.emptyState}>
@@ -122,21 +130,25 @@ export function ProgressionBuilder() {
                   <Pressable
                     style={[
                       styles.progCard,
-                      { borderLeftColor: color },
-                      isCurrentlyPlaying && styles.progCardPlaying,
+                      isCurrentlyPlaying && { 
+                        backgroundColor: '#333348',
+                        boxShadow: `0 0 16px ${color}`
+                      },
                     ]}
                     onPress={() => selectChord(chord)}
+                    onLongPress={() => setEditingChordIndex(idx)}
+                    delayLongPress={300}
                   >
                     <Text style={[styles.progNumeral, { color }]}>
                       {chord.romanNumeral}
                     </Text>
                     <Text style={styles.progSymbol}>{chord.symbol}</Text>
-                    <Pressable
-                      style={styles.removeBtn}
-                      onPress={() => removeFromProgression(idx)}
-                    >
-                      <Icon name="close" size={10} color="rgba(255,255,255,0.3)" />
-                    </Pressable>
+                    
+                    <View style={styles.cardActions}>
+                      <Pressable style={styles.actionBtn} onPress={() => removeFromProgression(idx)}>
+                        <Icon name="close" size={10} color="rgba(255,255,255,0.7)" />
+                      </Pressable>
+                    </View>
                   </Pressable>
 
                   <View style={styles.moveControls}>
@@ -148,42 +160,58 @@ export function ProgressionBuilder() {
                   </View>
                 </View>
 
-                {/* Passing chord suggestion between chords */}
-                {!isLast && passingChords[idx] && passingChords[idx]!.length > 0 && (
-                  <View style={styles.passingContainer}>
-                    <View style={styles.passingLine} />
-                    <View style={styles.passingSuggestions}>
-                      {passingChords[idx]!.map((pc, pcIdx) => (
-                        <Pressable
-                          key={`pass-${idx}-${pcIdx}`}
-                          style={styles.passingChip}
-                          onPress={() => {
-                            // Insert passing chord between idx and idx+1
-                            insertInProgression(pc, idx);
-                          }}
-                        >
-                          <Text style={styles.passingSymbol}>{pc.symbol}</Text>
-                          <Text style={styles.passingType}>
-                            {pc.name.includes('tritone') ? 'tritone sub' :
-                             pc.name.includes('dim') ? 'dim approach' : 'passing'}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                    <View style={styles.passingLine} />
-                  </View>
-                )}
-
-                {/* Simple arrow if no passing chords */}
-                {!isLast && (!passingChords[idx] || passingChords[idx]!.length === 0) && (
+                {/* Expandable Passing Chord Suggestion Segment */}
+                {!isLast && (
                   <View style={styles.arrow}>
-                    <Icon name="arrow-forward" size={14} color="rgba(255,255,255,0.12)" />
+                    {expandedPassingIdx === idx && passingChords[idx] && passingChords[idx]!.length > 0 ? (
+                      <View style={styles.passingContainer}>
+                        <View style={styles.passingSuggestions}>
+                          {passingChords[idx]!.map((pc, pcIdx) => (
+                            <Pressable
+                              key={`pass-${idx}-${pcIdx}`}
+                              style={styles.passingChip}
+                              onPress={() => {
+                                insertInProgression(pc, idx);
+                                setExpandedPassingIdx(null);
+                              }}
+                            >
+                              <Text style={styles.passingSymbol}>{pc.symbol}</Text>
+                              <Text style={styles.passingType}>
+                                {pc.name.includes('tritone') ? 'tritone sub' :
+                                 pc.name.includes('dim') ? 'dim approach' : 'passing'}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                        <Pressable onPress={() => setExpandedPassingIdx(null)} style={{marginTop: 4}}>
+                          <Icon name="chevron-forward" size={14} color="rgba(255,255,255,0.3)" />
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Pressable 
+                        style={styles.passingToggleCell} 
+                        onPress={() => passingChords[idx] && passingChords[idx]!.length > 0 ? setExpandedPassingIdx(idx) : null}
+                      >
+                        <Icon 
+                           name={passingChords[idx] && passingChords[idx]!.length > 0 ? "add" : "chevron-forward"} 
+                           size={passingChords[idx] && passingChords[idx]!.length > 0 ? 12 : 14} 
+                           color="rgba(255,255,255,0.15)" 
+                        />
+                      </Pressable>
+                    )}
                   </View>
                 )}
               </React.Fragment>
             );
           })}
         </ScrollView>
+      )}
+      
+      {editingChordIndex !== null && (
+        <EditChordModal 
+          chordIndex={editingChordIndex} 
+          onClose={() => setEditingChordIndex(null)} 
+        />
       )}
     </View>
   );
@@ -201,7 +229,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 12,
   },
   headerActions: {
     flexDirection: 'row',
@@ -209,9 +239,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    color: 'rgba(255,255,255,0.4)',
-    letterSpacing: 1.5,
+    color: '#8a8f98',
+    letterSpacing: 1,
+    fontWeight: '700',
+  },
+  lengthBadge: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    color: '#8a8f98',
     fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   playBtn: {
     flexDirection: 'row',
@@ -220,21 +259,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
-    backgroundColor: 'rgba(52, 211, 153, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.2)',
   },
-  playBtnActive: {
-    backgroundColor: 'rgba(248, 113, 113, 0.1)',
-    borderColor: 'rgba(248, 113, 113, 0.2)',
+  playBtnStart: {
+    backgroundColor: '#D0BCFF',
+    boxShadow: '0 0 12px rgba(208, 188, 255, 0.4)',
+  },
+  playBtnStop: {
+    backgroundColor: 'rgba(255, 180, 171, 0.2)',
   },
   playText: {
-    color: '#34D399',
     fontSize: 10,
+  },
+  playBtnTextPlay: {
+    color: '#3C0091',
     fontWeight: '700',
   },
-  playTextStop: {
-    color: '#F87171',
+  playBtnTextStop: {
+    color: '#FFB4AB',
+    fontWeight: '600',
   },
   clearBtn: {
     width: 28,
@@ -242,7 +284,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(248, 113, 113, 0.08)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  btnActive: {
+    backgroundColor: 'rgba(108, 142, 255, 0.15)',
   },
   tempoControls: {
     flexDirection: 'row',
@@ -250,8 +295,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: 12,
     paddingHorizontal: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   bpmBtn: {
     paddingHorizontal: 8,
@@ -310,30 +353,43 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   progCard: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderLeftWidth: 3,
+    paddingTop: 26,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    borderRadius: designTokens.borderRadiusLg,
+    backgroundColor: '#1A1A2E', // surface_container_low
+    position: 'relative',
+    minWidth: 76,
     alignItems: 'center',
-    minWidth: 64,
-    gap: 2,
+    gap: 4,
   },
   progCardPlaying: {
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-    borderWidth: 1,
-    borderLeftWidth: 3,
   },
   progNumeral: {
-    fontSize: 11,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   progSymbol: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
+  },
+  cardActions: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    flexDirection: 'row',
+    gap: 4,
+  },
+  actionBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   removeBtn: {
     position: 'absolute',
@@ -348,6 +404,16 @@ const styles = StyleSheet.create({
   },
   arrow: {
     paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passingToggleCell: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Passing chord suggestions
   passingContainer: {

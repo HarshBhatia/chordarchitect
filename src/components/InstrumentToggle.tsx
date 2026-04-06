@@ -17,114 +17,95 @@ export function InstrumentToggle() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.toggleRow}>
-        <Pressable
-          style={[styles.toggleBtn, instrument === 'guitar' && styles.toggleBtnActive]}
-          onPress={() => setInstrument('guitar')}
-        >
-          <Text style={[styles.emoji, instrument === 'guitar' && styles.emojiActive]}>🎸</Text>
-          <Text
-            variant="labelSmall"
-            style={[styles.toggleText, instrument === 'guitar' && styles.toggleTextActive]}
+      <View style={styles.section}>
+        <Text variant="labelSmall" style={styles.label}>INSTRUMENT</Text>
+        <View style={styles.track}>
+          <Pressable
+            style={[styles.segment, instrument === 'guitar' && styles.segmentActive]}
+            onPress={() => setInstrument('guitar')}
           >
-            Guitar
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.toggleBtn, instrument === 'piano' && styles.toggleBtnActive]}
-          onPress={() => setInstrument('piano')}
-        >
-          <Text style={[styles.emoji, instrument === 'piano' && styles.emojiActive]}>🎹</Text>
-          <Text
-            variant="labelSmall"
-            style={[styles.toggleText, instrument === 'piano' && styles.toggleTextActive]}
+            <Text
+              style={[styles.segmentText, instrument === 'guitar' && styles.segmentTextActive]}
+            >
+              Guitar
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.segment, instrument === 'piano' && styles.segmentActive]}
+            onPress={() => setInstrument('piano')}
           >
-            Piano
-          </Text>
-        </Pressable>
+            <Text
+              style={[styles.segmentText, instrument === 'piano' && styles.segmentTextActive]}
+            >
+              Piano
+            </Text>
+          </Pressable>
+        </View>
       </View>
-      <Pressable
-        style={[styles.intervalBtn, showIntervals && styles.intervalBtnActive]}
-        onPress={toggleIntervals}
-      >
-        <Icon
-          name="swap-horizontal"
-          size={14}
-          color={showIntervals ? '#34D399' : 'rgba(255,255,255,0.4)'}
-        />
-        <Text
-          variant="labelSmall"
-          style={[styles.intervalText, showIntervals && styles.intervalTextActive]}
-        >
-          {showIntervals ? 'Intervals' : 'Notes'}
-        </Text>
-      </Pressable>
+
+      <View style={styles.section}>
+        <Text variant="labelSmall" style={styles.label}>NOTATION</Text>
+        <View style={styles.track}>
+          <Pressable
+            style={[styles.segment, !showIntervals && styles.segmentActive]}
+            onPress={() => showIntervals && toggleIntervals()}
+          >
+            <Text style={[styles.segmentText, !showIntervals && styles.segmentTextActive]}>
+              Notes (A, B, C)
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.segment, showIntervals && styles.segmentActive]}
+            onPress={() => !showIntervals && toggleIntervals()}
+          >
+            <Text style={[styles.segmentText, showIntervals && styles.segmentTextActive]}>
+              Degrees (I, III, V)
+            </Text>
+          </Pressable>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    gap: 16,
+  },
+  section: {
+    // container for label + track
+  },
+  label: {
+    fontFamily: 'Space Grotesk, sans-serif',
+    color: '#958EA0',
+    marginBottom: 8,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  track: {
+    flexDirection: 'row',
+    backgroundColor: '#111125', // surface_dim 
+    borderRadius: 16,
+    padding: 4,
+  },
+  segment: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
   },
-  toggleRow: {
-    flexDirection: 'row',
-    backgroundColor: designTokens.glass,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: designTokens.glassBorder,
-    padding: 3,
+  segmentActive: {
+    backgroundColor: '#1E1E32', // surface_container
   },
-  toggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 17,
-    gap: 5,
-  },
-  toggleBtnActive: {
-    backgroundColor: 'rgba(108, 142, 255, 0.15)',
-  },
-  emoji: {
-    fontSize: 14,
-    opacity: 0.5,
-  },
-  emojiActive: {
-    opacity: 1,
-  },
-  toggleText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 11,
+  segmentText: {
+    color: '#958EA0',
+    fontSize: 13,
     fontWeight: '500',
   },
-  toggleTextActive: {
-    color: '#6C8EFF',
+  segmentTextActive: {
+    color: '#D0BCFF',
     fontWeight: '700',
-  },
-  intervalBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 16,
-    backgroundColor: designTokens.glass,
-    borderWidth: 1,
-    borderColor: designTokens.glassBorder,
-    gap: 4,
-  },
-  intervalBtnActive: {
-    backgroundColor: 'rgba(52, 211, 153, 0.1)',
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-  },
-  intervalText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 11,
-  },
-  intervalTextActive: {
-    color: '#34D399',
-    fontWeight: '600',
   },
 });

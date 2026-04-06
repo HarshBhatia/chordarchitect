@@ -4,9 +4,10 @@
 
 import { create } from 'zustand';
 import type { ChordInfo, Complexity, InstrumentType, ScaleType } from '../types';
-import { getDiatonicChords } from '../engine/chords';
+import { getDiatonicChords, applyChordModifications } from '../engine/chords';
 import { getScaleNotes } from '../engine/scales';
 import { resolveTemplate, getSecondaryDominants } from '../engine/harmony';
+import { getGuitarVoicings, getVoicingPitches, getPianoInversionPitches, getClosestVoicingIndex } from '../engine/voicings';
 import { playChord, playProgression } from '../engine/audio';
 
 interface HarmonyState {
@@ -32,12 +33,25 @@ interface HarmonyState {
   // Progression builder
   progression: ChordInfo[];
 
+  // Fretboard Mode
+  fretboardMode: 'voicing' | 'all';
+
+  // UI State
+  isSettingsOpen: boolean;
+
   // Audio
   isPlaying: boolean;
   playingChordIndex: number;
   stopPlayback: (() => void) | null;
   bpm: number;
   looping: boolean;
+  playStyle: 'chord' | 'arpeggio';
+  timeSignature: '4/4' | '3/4';
+  metronomeEnabled: boolean;
+  autoVisualizePlayback: boolean;
+  synthType: 'sine' | 'sawtooth' | 'square' | 'triangle';
+  baseOctave: number;
+  metronomeVolume: number;
 
   // Actions
   setRootNote: (note: string) => void;
@@ -51,6 +65,7 @@ interface HarmonyState {
   prevVoicing: () => void;
   addToProgression: (chord: ChordInfo) => void;
   insertInProgression: (chord: ChordInfo, afterIndex: number) => void;
+  updateChordInProgression: (index: number, updates: Partial<ChordInfo>) => void;
   removeFromProgression: (index: number) => void;
   moveInProgression: (from: number, to: number) => void;
   clearProgression: () => void;
@@ -60,6 +75,17 @@ interface HarmonyState {
   stopAudio: () => void;
   setBpm: (bpm: number) => void;
   toggleLooping: () => void;
+  setFretboardMode: (mode: 'voicing' | 'all') => void;
+  setIsSettingsOpen: (isOpen: boolean) => void;
+  setPlayStyle: (style: 'chord' | 'arpeggio') => void;
+  setTimeSignature: (ts: '4/4' | '3/4') => void;
+  setMetronomeEnabled: (enabled: boolean) => void;
+  toggleMetronome: () => void;
+  setAutoVisualizePlayback: (enabled: boolean) => void;
+  toggleAutoVisualize: () => void;
+  setSynthType: (type: 'sine' | 'sawtooth' | 'square' | 'triangle') => void;
+  setBaseOctave: (octave: number) => void;
+  setMetronomeVolume: (db: number) => void;
 }
 
 function computeDerived(rootNote: string, scaleType: ScaleType, complexity: Complexity) {
@@ -88,13 +114,23 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
 
   selectedChord: initialDerived.diatonicChords[0] || null,
   voicingIndex: 0,
-  progression: [],
+  progression: resolveTemplate(initialRoot, initialScale, 'I-V-vi-IV', initialComplexity),
 
   isPlaying: false,
   playingChordIndex: -1,
   stopPlayback: null,
   bpm: 80,
   looping: true,
+  playStyle: 'chord',
+  timeSignature: '4/4',
+  metronomeEnabled: false,
+  autoVisualizePlayback: true,
+  synthType: 'sine',
+  baseOctave: 4,
+  metronomeVolume: -10,
+
+  fretboardMode: 'voicing',
+  isSettingsOpen: false,
 
   setRootNote: (note) => {
     const { scaleType, complexity } = get();
@@ -104,7 +140,6 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
       ...derived,
       selectedChord: derived.diatonicChords[0] || null,
       voicingIndex: 0,
-      progression: [],
     });
   },
 
@@ -116,7 +151,6 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
       ...derived,
       selectedChord: derived.diatonicChords[0] || null,
       voicingIndex: 0,
-      progression: [],
     });
   },
 
@@ -143,13 +177,28 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
   nextVoicing: () => set(s => ({ voicingIndex: s.voicingIndex + 1 })),
   prevVoicing: () => set(s => ({ voicingIndex: Math.max(0, s.voicingIndex - 1) })),
 
-  addToProgression: (chord) => set(s => ({
-    progression: [...s.progression, chord],
-  })),
+  addToProgression: (chord) => set(s => {
+    if (s.progression.length >= 16) return { progression: s.progression };
+    return { progression: [...s.progression, chord] };
+  }),
 
   insertInProgression: (chord, afterIndex) => set(s => {
     const newProg = [...s.progression];
     newProg.splice(afterIndex + 1, 0, chord);
+    return { progression: newProg };
+  }),
+
+  updateChordInProgression: (index, updates) => set(s => {
+    const newProg = [...s.progression];
+    const target = newProg[index];
+    if (target) {
+      newProg[index] = applyChordModifications(target, updates, s.rootNote, s.scaleType);
+      
+      // If we are currently selecting this chord, update selection as well
+      if (s.selectedChord && s.selectedChord.degree === target.degree && s.selectedChord.symbol === target.symbol) {
+        return { progression: newProg, selectedChord: newProg[index], voicingIndex: 0 };
+      }
+    }
     return { progression: newProg };
   }),
 
@@ -173,37 +222,71 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
   },
 
   playSelectedChord: () => {
-    const { selectedChord } = get();
+    const { selectedChord, instrument } = get();
     if (selectedChord && selectedChord.notes.length > 0) {
-      playChord(selectedChord.notes);
+      if (instrument === 'guitar') {
+        const voicings = getGuitarVoicings(selectedChord.symbol);
+        const pitches = getVoicingPitches(voicings[0].frets);
+        playChord(pitches);
+      } else {
+        const pitches = getPianoInversionPitches(selectedChord.notes, selectedChord.pianoInversion || 0, 3);
+        playChord(pitches);
+      }
     }
   },
 
   playFullProgression: () => {
-    const { progression, stopPlayback: existingStop, bpm, looping } = get();
+    const { 
+      progression, 
+      stopPlayback: existingStop, 
+      bpm, 
+      looping,
+      playStyle,
+      timeSignature,
+      metronomeEnabled,
+      autoVisualizePlayback,
+      instrument,
+      selectChord
+    } = get();
+
     if (existingStop) existingStop();
     if (progression.length === 0) return;
 
-    const chordNotes = progression.map(c =>
-      c.notes.length > 0 ? c.notes : ['C', 'E', 'G']
-    );
+    // Ensure Tone.js plays the entire chord in 2 octaves uniformly in progression 
+    // instead of relying on narrow voicings from specific instruments
+    const chordPitchesList = progression.map(c => {
+      const octave3 = c.notes.map(n => `${n}3`);
+      const octave4 = c.notes.map(n => `${n}4`);
+      return [...octave3, ...octave4];
+    });
 
-    const { stop } = playProgression(
-      chordNotes,
+    const { stop } = playProgression(chordPitchesList, {
       bpm,
-      looping,
-      (index) => {
+      loop: looping,
+      playStyle,
+      timeSignature,
+      metronomeEnabled,
+      onChordChange: (index) => {
         // Chord change callback
         if (index >= 0) {
+          const { selectedChord, voicingIndex, selectChord, fretboardMode } = get();
           set({ playingChordIndex: index });
+          if (autoVisualizePlayback && progression[index]) {
+            if (fretboardMode === 'voicing' && selectedChord) {
+              const bestIdx = getClosestVoicingIndex(selectedChord.symbol, voicingIndex, progression[index].symbol);
+              set({ selectedChord: progression[index], voicingIndex: bestIdx });
+            } else {
+              selectChord(progression[index]);
+            }
+          }
         } else {
           set({ isPlaying: false, playingChordIndex: -1, stopPlayback: null });
         }
       },
-      () => {
+      onLoopComplete: () => {
         // Loop complete (only called if looping)
       },
-    );
+    });
 
     set({ isPlaying: true, playingChordIndex: 0, stopPlayback: stop });
   },
@@ -217,4 +300,18 @@ export const useHarmonyStore = create<HarmonyState>((set, get) => ({
   setBpm: (bpm) => set({ bpm: Math.max(40, Math.min(200, bpm)) }),
 
   toggleLooping: () => set(s => ({ looping: !s.looping })),
+
+  setFretboardMode: (mode) => set({ fretboardMode: mode }),
+
+  setIsSettingsOpen: (isOpen) => set({ isSettingsOpen: isOpen }),
+
+  setPlayStyle: (style) => set({ playStyle: style }),
+  setTimeSignature: (ts) => set({ timeSignature: ts }),
+  setMetronomeEnabled: (enabled) => set({ metronomeEnabled: enabled }),
+  toggleMetronome: () => set(s => ({ metronomeEnabled: !s.metronomeEnabled })),
+  setAutoVisualizePlayback: (enabled) => set({ autoVisualizePlayback: enabled }),
+  toggleAutoVisualize: () => set(s => ({ autoVisualizePlayback: !s.autoVisualizePlayback })),
+  setSynthType: (type) => set({ synthType: type }),
+  setBaseOctave: (octave) => set({ baseOctave: octave }),
+  setMetronomeVolume: (db) => set({ metronomeVolume: db }),
 }));

@@ -26,8 +26,9 @@ export default function RootLayout() {
   if (Platform.OS === 'web' && fontsLoaded) {
     const style = document.createElement('style');
     style.textContent = `
-      * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
-      body { background-color: #0A0E1A; margin: 0; padding: 0; overflow-x: hidden; }
+      @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+      *:not([style*="font-family"]) { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
+      body { background-color: #111125; margin: 0; padding: 0; overflow-x: hidden; }
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
@@ -53,6 +54,6 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0A0E1A',
+    backgroundColor: '#111125',
   },
 });

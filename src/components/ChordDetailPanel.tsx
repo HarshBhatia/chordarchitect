@@ -63,11 +63,10 @@ export function ChordDetailPanel() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: designTokens.glass,
-    borderRadius: designTokens.borderRadius,
-    borderWidth: 1,
-    borderColor: designTokens.glassBorder,
-    padding: 12,
+    backgroundColor: '#1E1E32', // surface_container
+    borderRadius: designTokens.borderRadiusLg,
+    borderWidth: 0,
+    padding: 16,
   },
   row: {
     flexDirection: 'row',
@@ -84,7 +83,8 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   symbol: {
-    fontSize: 20,
+    fontFamily: 'Manrope, sans-serif',
+    fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
@@ -97,8 +97,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: 0,
     gap: 5,
   },
   funcIndicator: {
@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   romanText: {
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: 12,
     fontWeight: '800',
   },
@@ -129,10 +130,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   detailLabel: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 9,
-    fontWeight: '500',
+    fontFamily: 'Space Grotesk, sans-serif',
+    color: '#958EA0',
+    fontSize: 10,
+    fontWeight: '600',
     width: 36,
+    textTransform: 'uppercase',
   },
   noteChips: {
     flexDirection: 'row',
@@ -142,19 +145,20 @@ const styles = StyleSheet.create({
   noteChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 0,
+    backgroundColor: '#333348', // surface_container_highest
   },
   noteValue: {
     fontSize: 12,
     fontWeight: '700',
   },
   intervalBadge: {
-    fontSize: 8,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: 9,
     fontWeight: '600',
   },
 });

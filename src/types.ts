@@ -45,6 +45,12 @@ export interface ChordInfo {
   isSecondaryDominant?: boolean;
   /** Target chord for secondary dominant e.g. "ii" */
   secondaryDominantTarget?: string;
+  /** Custom complexity override for this specific instance */
+  complexity?: Complexity;
+  /** Suspended modification override */
+  isSus?: 'sus2' | 'sus4';
+  /** Chosen Piano Inversion (0 = root, 1 = first, 2 = second) */
+  pianoInversion?: 0 | 1 | 2;
 }
 
 export interface GuitarVoicing {

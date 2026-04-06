@@ -28,6 +28,7 @@
     "expo-symbols": "~1.0.8",
     "expo-system-ui": "~6.0.9",
     "expo-web-browser": "~15.0.10",
+    "midi-writer-js": "^3.2.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
@@ -40,6 +41,8 @@
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.5.1",
     "tonal": "^6.4.3",
+    "tone": "^14.7.77",
+    "tslib": "^2.8.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

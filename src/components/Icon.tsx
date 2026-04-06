@@ -1,9 +1,5 @@
-/**
- * Icon — lightweight unicode-based icons (no font dependencies)
- */
-
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface IconProps {
   name: string;
@@ -11,47 +7,29 @@ interface IconProps {
   color?: string;
 }
 
-// Unicode mappings for icons we use
-const ICON_MAP: Record<string, string> = {
-  'chevron-down': '▾',
-  'chevron-back': '‹',
-  'chevron-forward': '›',
-  'checkmark': '✓',
-  'add': '+',
-  'close': '×',
-  'trash-outline': '🗑',
-  'arrow-forward': '→',
-  'play': '▶',
-  'stop': '■',
-  'volume-high': '♪',
-  'musical-notes-outline': '♫',
-  'musical-notes': '♫',
-  'sparkles': '✦',
-  'swap-horizontal': '⇄',
+const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
+  'chevron-down': 'chevron-down',
+  'chevron-back': 'chevron-back',
+  'chevron-forward': 'chevron-forward',
+  'checkmark': 'checkmark',
+  'add': 'add',
+  'close': 'close',
+  'trash-outline': 'trash-outline',
+  'arrow-forward': 'arrow-forward',
+  'play': 'play',
+  'stop': 'square',
+  'volume-high': 'volume-high',
+  'musical-notes-outline': 'musical-notes-outline',
+  'musical-notes': 'musical-notes',
+  'sparkles': 'sparkles',
+  'swap-horizontal': 'swap-horizontal',
+  'time': 'time-outline',
+  'pencil': 'pencil-outline',
+  'download-outline': 'download-outline',
+  'options': 'options-outline',
 };
 
 export function Icon({ name, size = 16, color = '#fff' }: IconProps) {
-  const char = ICON_MAP[name] || '•';
-  return (
-    <Text
-      style={[
-        styles.icon,
-        {
-          fontSize: size,
-          color,
-          lineHeight: size * 1.2,
-        },
-      ]}
-      selectable={false}
-    >
-      {char}
-    </Text>
-  );
+  const iconName = ICON_MAP[name] || 'ellipse-outline';
+  return <Ionicons name={iconName} size={size} color={color} />;
 }
-
-const styles = StyleSheet.create({
-  icon: {
-    textAlign: 'center',
-    fontWeight: '400',
-  },
-});

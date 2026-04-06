@@ -6,12 +6,12 @@
  */
 
 import React, { useMemo } from 'react';
-import { StyleSheet, View, Pressable } from 'react-native';
+import { StyleSheet, View, Pressable, useWindowDimensions } from 'react-native';
 import { Text } from 'react-native-paper';
 import Svg, { Rect, Line, Circle, Text as SvgText, G } from 'react-native-svg';
 import { Icon } from './Icon';
 import { useHarmonyStore } from '../store/useHarmonyStore';
-import { getVoicingMarkers, getGuitarVoicings } from '../engine/voicings';
+import { getVoicingMarkers, getGuitarVoicings, getFretboardMarkers } from '../engine/voicings';
 import { FRET_COUNT, FRET_MARKERS, DOUBLE_FRET_MARKERS, INTERVAL_COLORS } from '../engine/constants';
 import { designTokens } from '../theme';
 import { playChord } from '../engine/audio';
@@ -43,6 +43,10 @@ export function Fretboard() {
   const voicingIndex = useHarmonyStore(s => s.voicingIndex);
   const nextVoicing = useHarmonyStore(s => s.nextVoicing);
   const prevVoicing = useHarmonyStore(s => s.prevVoicing);
+  const fretboardMode = useHarmonyStore(s => s.fretboardMode);
+  const setFretboardMode = useHarmonyStore(s => s.setFretboardMode);
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 768;
 
   // Get all voicings for the selected chord
   const voicings = useMemo(() => {
@@ -53,15 +57,38 @@ export function Fretboard() {
   const currentVoicingIdx = voicings.length > 0 ? voicingIndex % voicings.length : 0;
   const currentVoicing = voicings[currentVoicingIdx];
 
-  // Get markers for the current voicing shape
+  // Get markers for the current voicing shape OR all notes
   const markers = useMemo(() => {
-    if (!selectedChord || !currentVoicing) return [];
+    if (!selectedChord) return [];
+    if (fretboardMode === 'all') {
+      return getFretboardMarkers(selectedChord.notes, selectedChord.root);
+    }
+    if (!currentVoicing) return [];
     return getVoicingMarkers(currentVoicing, selectedChord.root);
-  }, [selectedChord, currentVoicing]);
+  }, [selectedChord, currentVoicing, fretboardMode]);
 
   const getMarkerColor = (displayInterval: string) => {
     return INTERVAL_COLORS[displayInterval] || '#6C8EFF';
   };
+
+  // Calculate dynamic viewBox for mobile
+  const viewBox = useMemo(() => {
+    const baseViewBox = `0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`;
+    if (isNarrow && fretboardMode === 'voicing' && currentVoicing) {
+      const activeFrets = currentVoicing.frets.filter(f => f > 0);
+      if (activeFrets.length > 0) {
+        const minFret = Math.min(...activeFrets);
+        const maxFret = Math.max(...activeFrets);
+        const startFret = Math.max(0, minFret - 1);
+        const endFret = Math.min(FRETS, maxFret + 1);
+
+        const startX = startFret === 0 ? 0 : PADDING_LEFT + (startFret - 1) * FRET_SPACING;
+        const endX = PADDING_LEFT + endFret * FRET_SPACING + PADDING_RIGHT;
+        return `${startX} 0 ${endX - startX} ${BOARD_HEIGHT}`;
+      }
+    }
+    return baseViewBox;
+  }, [isNarrow, fretboardMode, currentVoicing]);
 
   return (
     <View style={styles.container}>
@@ -70,20 +97,36 @@ export function Fretboard() {
         <Pressable
           style={[styles.voicingBtn, currentVoicingIdx === 0 && styles.voicingBtnDisabled]}
           onPress={prevVoicing}
-          disabled={currentVoicingIdx === 0}
+          disabled={currentVoicingIdx === 0 || fretboardMode === 'all'}
         >
-          <Icon name="chevron-back" size={14} color={currentVoicingIdx === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)'} />
+          <Icon name="chevron-back" size={16} color={(currentVoicingIdx === 0 || fretboardMode === 'all') ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)'} />
         </Pressable>
         <Text style={styles.voicingLabel}>
-          {currentVoicing?.label || 'Shape'} ({currentVoicingIdx + 1}/{voicings.length})
+          {fretboardMode === 'all' ? 'All Notes' : `${currentVoicing?.label || 'Shape'} (${currentVoicingIdx + 1}/${voicings.length})`}
         </Text>
         <Pressable
-          style={[styles.voicingBtn, currentVoicingIdx >= voicings.length - 1 && styles.voicingBtnDisabled]}
+          style={[styles.voicingBtn, (currentVoicingIdx >= voicings.length - 1 || fretboardMode === 'all') && styles.voicingBtnDisabled]}
           onPress={nextVoicing}
-          disabled={currentVoicingIdx >= voicings.length - 1}
+          disabled={currentVoicingIdx >= voicings.length - 1 || fretboardMode === 'all'}
         >
-          <Icon name="chevron-forward" size={14} color={currentVoicingIdx >= voicings.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)'} />
+          <Icon name="chevron-forward" size={16} color={(currentVoicingIdx >= voicings.length - 1 || fretboardMode === 'all') ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)'} />
         </Pressable>
+
+        <View style={styles.modeToggleGroup}>
+          <Pressable 
+            style={[styles.modeToggleBtn, fretboardMode === 'voicing' && styles.modeToggleBtnActive]}
+            onPress={() => setFretboardMode('voicing')}
+          >
+            <Text style={styles.modeToggleText}>Shape</Text>
+          </Pressable>
+          <Pressable 
+            style={[styles.modeToggleBtn, fretboardMode === 'all' && styles.modeToggleBtnActive]}
+            onPress={() => setFretboardMode('all')}
+          >
+            <Text style={styles.modeToggleText}>All</Text>
+          </Pressable>
+        </View>
+
         <Pressable
           style={styles.playBtn}
           onPress={() => {
@@ -96,8 +139,8 @@ export function Fretboard() {
 
       <Svg
         width="100%"
-        height={BOARD_HEIGHT}
-        viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
+        height={isNarrow ? BOARD_HEIGHT * 1.5 : BOARD_HEIGHT}
+        viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
       >
         {/* Background */}
@@ -125,7 +168,7 @@ export function Fretboard() {
           <SvgText
             key={`fretnum-${fret}`}
             x={PADDING_LEFT + (fret - 0.5) * FRET_SPACING} y={BOARD_HEIGHT - 2}
-            textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.2)" fontWeight="500"
+            textAnchor="middle" fontSize={12} fill="rgba(255,255,255,0.4)" fontWeight="600"
           >
             {fret}
           </SvgText>
@@ -155,12 +198,20 @@ export function Fretboard() {
           const stringIdx = visualRowToStringIndex(row);
           // Thicker for lower strings
           const thickness = 0.8 + (stringIdx * 0.35);
+          
+          let isMuted = false;
+          if (fretboardMode === 'voicing' && currentVoicing) {
+            isMuted = currentVoicing.frets[stringIdx] === -1;
+          }
+
           return (
             <Line
               key={`string-${row}`}
               x1={PADDING_LEFT} y1={y}
               x2={PADDING_LEFT + FRETS * FRET_SPACING} y2={y}
               stroke={designTokens.stringColor} strokeWidth={thickness}
+              opacity={isMuted ? 0.3 : 1}
+              strokeDasharray={isMuted ? "4,6" : "none"}
             />
           );
         })}
@@ -170,12 +221,49 @@ export function Fretboard() {
           <SvgText
             key={`label-${row}`}
             x={PADDING_LEFT - 14} y={PADDING_TOP + row * STRING_SPACING + 4}
-            textAnchor="middle" fontSize={9}
-            fill="rgba(255,255,255,0.3)" fontWeight="500"
+            textAnchor="middle" fontSize={11}
+            fill="rgba(255,255,255,0.5)" fontWeight="600"
           >
             {note}
           </SvgText>
         ))}
+
+        {/* Barre rendering */}
+        {(() => {
+          if (fretboardMode !== 'voicing' || !currentVoicing || currentVoicing.frets.length === 0) return null;
+          const activeFrets = currentVoicing.frets.filter(f => f > 0);
+          if (activeFrets.length < 2) return null;
+          
+          const minFret = Math.min(...activeFrets);
+          const stringsWithMinFret = [];
+          for (let i = 0; i < 6; i++) {
+            if (currentVoicing.frets[i] === minFret) stringsWithMinFret.push(i);
+          }
+          
+          if (stringsWithMinFret.length > 1) {
+            const visualRows = stringsWithMinFret.map(sIdx => 5 - sIdx); // string 5 = row 0
+            const startRow = Math.min(...visualRows);
+            const endRow = Math.max(...visualRows);
+            const cx = PADDING_LEFT + (minFret - 0.5) * FRET_SPACING;
+            
+            // Determine barre color based on the lowest string involved
+            // We usually colour the barre using root colour if the root is in the barre
+            const barreColor = designTokens.tonic;
+            
+            return (
+              <Rect
+                x={cx - 8}
+                y={PADDING_TOP + startRow * STRING_SPACING - 8}
+                width={16}
+                height={(endRow - startRow) * STRING_SPACING + 16}
+                rx={8}
+                fill={barreColor}
+                opacity={0.8}
+              />
+            );
+          }
+          return null;
+        })()}
 
         {/* Active voicing markers */}
         {markers.map((marker, idx) => {
@@ -205,23 +293,6 @@ export function Fretboard() {
           );
         })}
 
-        {/* Muted string indicators (X) */}
-        {currentVoicing && currentVoicing.frets.map((fret, stringIdx) => {
-          if (fret !== -1) return null;
-          const visualRow = 5 - stringIdx;
-          const cx = PADDING_LEFT - 10;
-          const cy = PADDING_TOP + visualRow * STRING_SPACING;
-          return (
-            <SvgText
-              key={`mute-${stringIdx}`}
-              x={cx} y={cy + 4}
-              textAnchor="middle" fontSize={10} fontWeight="700"
-              fill="rgba(255,255,255,0.2)"
-            >
-              ×
-            </SvgText>
-          );
-        })}
       </Svg>
     </View>
   );
@@ -234,6 +305,7 @@ const styles = StyleSheet.create({
     backgroundColor: designTokens.fretboardBg,
     borderWidth: 1,
     borderColor: designTokens.glassBorder,
+    paddingBottom: 16,
   },
   voicingBar: {
     flexDirection: 'row',
@@ -258,10 +330,32 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   voicingLabel: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.3,
+    minWidth: 100,
+    textAlign: 'center',
+  },
+  modeToggleGroup: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 2,
+    marginLeft: 8,
+  },
+  modeToggleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  modeToggleBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  modeToggleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
   },
   playBtn: {
     width: 28,

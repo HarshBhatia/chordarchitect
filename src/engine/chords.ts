@@ -180,3 +180,58 @@ export function getSecondaryDominant(targetRoot: string): string {
   const rootName = v7Root.replace(/\d+$/, '');
   return `${rootName}7`;
 }
+
+/**
+ * Apply per-instance modifications to a base chord (complexity, sus, inversions)
+ */
+export function applyChordModifications(
+  baseChord: ChordInfo,
+  updates: Partial<ChordInfo>,
+  scaleRoot: string,
+  scaleType: ScaleType
+): ChordInfo {
+  // Start with a fresh base from the scale if complexity changed
+  let resolvedChord = { ...baseChord };
+  const targetComplexity = updates.complexity || baseChord.complexity;
+
+  // 1. Resolve new complexity tier base
+  if (targetComplexity && targetComplexity !== baseChord.complexity && !baseChord.isSecondaryDominant) {
+    const diatonic = getDiatonicChords(scaleRoot, scaleType, targetComplexity);
+    const updatedBase = diatonic.find(c => c.degree === baseChord.degree);
+    if (updatedBase) {
+      resolvedChord = { ...updatedBase };
+      resolvedChord.complexity = targetComplexity;
+    }
+  }
+
+  // Preserve manual modifications
+  resolvedChord.isSus = updates.isSus;
+  resolvedChord.pianoInversion = updates.pianoInversion;
+  if (targetComplexity) resolvedChord.complexity = targetComplexity;
+
+  // 2. Apply explicit Sus transformation
+  if (resolvedChord.isSus) {
+    const thirdIdx = resolvedChord.intervals.findIndex(i => i === '3m' || i === '3M');
+    if (thirdIdx !== -1) {
+      // Find exact interval and note to substitute
+      const targetInterval = resolvedChord.isSus === 'sus2' ? '2M' : '4P';
+      const targetNote = Note.transpose(resolvedChord.root, targetInterval);
+      
+      resolvedChord.notes = [...resolvedChord.notes];
+      resolvedChord.intervals = [...resolvedChord.intervals];
+      resolvedChord.displayIntervals = [...resolvedChord.displayIntervals];
+      
+      resolvedChord.notes[thirdIdx] = targetNote;
+      resolvedChord.intervals[thirdIdx] = targetInterval;
+      resolvedChord.displayIntervals[thirdIdx] = intervalToDisplay(targetInterval);
+      
+      // Update symbols
+      resolvedChord.symbol = resolvedChord.symbol.replace(/m|maj/g, '').replace(/dim/, 'dim') + resolvedChord.isSus;
+      resolvedChord.symbol = resolvedChord.symbol.replace(/sus[24]sus[24]/, resolvedChord.isSus); // cleanup 
+      resolvedChord.name = `${resolvedChord.root} ${resolvedChord.isSus}`;
+      resolvedChord.romanNumeral += `(${resolvedChord.isSus})`;
+    }
+  }
+
+  return resolvedChord;
+}

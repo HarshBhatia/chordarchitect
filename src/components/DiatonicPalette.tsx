@@ -10,6 +10,7 @@ import { useHarmonyStore } from '../store/useHarmonyStore';
 import { FUNCTION_COLORS, FUNCTION_GLOW_COLORS } from '../engine/constants';
 import { designTokens } from '../theme';
 import type { ChordInfo } from '../types';
+import { AddCustomChordModal } from './AddCustomChordModal';
 
 export function DiatonicPalette() {
   const diatonicChords = useHarmonyStore(s => s.diatonicChords);
@@ -19,6 +20,8 @@ export function DiatonicPalette() {
   const showSecondaryDominants = useHarmonyStore(s => s.showSecondaryDominants);
   const toggleSecondaryDominants = useHarmonyStore(s => s.toggleSecondaryDominants);
   const secondaryDominants = useHarmonyStore(s => s.secondaryDominants);
+
+  const [isCustomModalOpen, setIsCustomModalOpen] = React.useState(false);
 
   const isSelected = (chord: ChordInfo) =>
     selectedChord?.symbol === chord.symbol && selectedChord?.degree === chord.degree;
@@ -55,8 +58,10 @@ export function DiatonicPalette() {
               <Pressable
                 style={[
                   styles.chordCard,
-                  { borderColor: selected ? color : 'transparent' },
-                  selected && { backgroundColor: glowColor },
+                  selected && { 
+                    backgroundColor: '#333348', // surface_container_highest
+                    boxShadow: `0 0 16px ${glowColor}`
+                  },
                 ]}
                 onPress={() => selectChord(chord)}
               >
@@ -107,7 +112,27 @@ export function DiatonicPalette() {
             </View>
           );
         })}
+
+        {/* Custom Chord Button */}
+        <View style={styles.chordColumn}>
+          <Pressable
+            style={[styles.chordCard, styles.customChordCard]}
+            onPress={() => setIsCustomModalOpen(true)}
+          >
+            <View style={[styles.funcDot, { backgroundColor: 'transparent' }]} />
+            <Text style={[styles.romanNumeral, { color: 'rgba(255,255,255,0.7)', fontSize: 24 }]}>
+              +
+            </Text>
+            <Text style={styles.chordSymbol}>Custom</Text>
+            <Text style={styles.chordNotes}>Borrowed</Text>
+          </Pressable>
+        </View>
+
       </ScrollView>
+
+      {isCustomModalOpen && (
+        <AddCustomChordModal visible={isCustomModalOpen} onClose={() => setIsCustomModalOpen(false)} />
+      )}
     </View>
   );
 }
@@ -123,10 +148,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    color: 'rgba(255,255,255,0.4)',
+    fontFamily: 'Space Grotesk, sans-serif',
+    color: '#958EA0',
     letterSpacing: 1.5,
-    fontSize: 10,
+    fontSize: 12,
     marginLeft: 4,
+    textTransform: 'uppercase',
   },
   secDomBtn: {
     paddingHorizontal: 10,
@@ -142,7 +169,7 @@ const styles = StyleSheet.create({
   },
   secDomText: {
     color: 'rgba(255,255,255,0.4)',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
   },
   secDomTextActive: {
@@ -159,13 +186,17 @@ const styles = StyleSheet.create({
   },
   chordCard: {
     width: 88,
+    height: 132,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: designTokens.borderRadius,
-    backgroundColor: designTokens.glass,
-    borderWidth: 1.5,
+    borderRadius: designTokens.borderRadiusLg,
+    backgroundColor: '#1A1A2E', // surface_container_low
+    borderWidth: 0,
     alignItems: 'center',
     gap: 4,
+  },
+  customChordCard: {
+    backgroundColor: '#1E1E32', // surface_container
   },
   funcDot: {
     width: 6,
@@ -174,19 +205,21 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   romanNumeral: {
-    fontSize: 16,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: 18,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   chordSymbol: {
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
   },
   chordNotes: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 9,
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 11,
     marginTop: 2,
+    fontWeight: '500',
   },
   addBtn: {
     marginTop: 4,
@@ -209,12 +242,12 @@ const styles = StyleSheet.create({
   },
   secDomLabel: {
     color: '#F87171',
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '700',
   },
   secDomSymbol: {
     color: 'rgba(248, 113, 113, 0.7)',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '500',
   },
 });

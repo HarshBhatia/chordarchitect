@@ -6,8 +6,8 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Rect, Text as SvgText, G } from 'react-native-svg';
 import { useHarmonyStore } from '../store/useHarmonyStore';
-import { getPianoKeyMarkers } from '../engine/voicings';
-import { FUNCTION_COLORS } from '../engine/constants';
+import { getPianoKeyMarkers, getPianoInversionPitches } from '../engine/voicings';
+import { FUNCTION_COLORS, INTERVAL_COLORS } from '../engine/constants';
 import { designTokens } from '../theme';
 
 // Layout
@@ -48,7 +48,15 @@ export function PianoKeyboard() {
 
   const markers = useMemo(() => {
     if (!selectedChord) return [];
-    return getPianoKeyMarkers(selectedChord.notes, selectedChord.root, 3, 5);
+    
+    // Calculate exact pitches for the inversion
+    const pitches = getPianoInversionPitches(
+      selectedChord.notes, 
+      selectedChord.pianoInversion || 0,
+      3 // base octave
+    );
+
+    return getPianoKeyMarkers(pitches, selectedChord.root, 3, 5);
   }, [selectedChord]);
 
   const markerSet = useMemo(() => {
@@ -57,10 +65,8 @@ export function PianoKeyboard() {
     return set;
   }, [markers]);
 
-  const getKeyColor = (isRoot: boolean) => {
-    if (isRoot) return designTokens.markerRoot;
-    if (!selectedChord) return designTokens.markerActive;
-    return FUNCTION_COLORS[selectedChord.function] || designTokens.markerActive;
+  const getKeyColor = (isRoot: boolean, displayInterval: string) => {
+    return INTERVAL_COLORS[displayInterval] || (isRoot ? designTokens.markerRoot : designTokens.markerActive);
   };
 
   // Build white and black key positions
@@ -113,7 +119,7 @@ export function PianoKeyboard() {
           const markerKey = `${key.note}${key.octave}`;
           const marker = markerSet.get(markerKey);
           const isActive = !!marker;
-          const fillColor = isActive ? getKeyColor(marker!.isRoot) : designTokens.whiteKey;
+          const fillColor = isActive ? getKeyColor(marker!.isRoot, marker!.displayInterval) : designTokens.whiteKey;
 
           return (
             <G key={`white-${i}`}>
@@ -171,7 +177,7 @@ export function PianoKeyboard() {
           const markerKey = `${key.note}${key.octave}`;
           const marker = markerSet.get(markerKey);
           const isActive = !!marker;
-          const fillColor = isActive ? getKeyColor(marker!.isRoot) : designTokens.blackKey;
+          const fillColor = isActive ? getKeyColor(marker!.isRoot, marker!.displayInterval) : designTokens.blackKey;
 
           return (
             <G key={`black-${i}`}>
